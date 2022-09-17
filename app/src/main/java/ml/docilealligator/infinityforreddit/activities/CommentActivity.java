@@ -201,57 +201,7 @@ public class CommentActivity extends BaseActivity implements UploadImageEnabledA
         String parentText = intent.getStringExtra(EXTRA_COMMENT_PARENT_TEXT_KEY);
 
         int linkColor = mCustomThemeWrapper.getLinkColor();
-        Markwon markwon = Markwon.builder(this)
-                .usePlugin(MarkwonInlineParserPlugin.create(plugin -> {
-                    plugin.excludeInlineProcessor(AutolinkInlineProcessor.class);
-                    plugin.excludeInlineProcessor(HtmlInlineProcessor.class);
-                    plugin.excludeInlineProcessor(BangInlineProcessor.class);
-                    plugin.addInlineProcessor(new SuperscriptInlineProcessor());
-                }))
-                .usePlugin(HtmlPlugin.create(plugin -> {
-                    plugin.excludeDefaults(true).addHandler(new SuperScriptHandler());
-                }))
-                .usePlugin(new AbstractMarkwonPlugin() {
-                    @NonNull
-                    @Override
-                    public String processMarkdown(@NonNull String markdown) {
-                        return Utils.fixSuperScript(markdown);
-                    }
 
-                    @Override
-                    public void configureConfiguration(@NonNull MarkwonConfiguration.Builder builder) {
-                        builder.linkResolver((view, link) -> {
-                            Intent intent = new Intent(CommentActivity.this, LinkResolverActivity.class);
-                            Uri uri = Uri.parse(link);
-                            intent.setData(uri);
-                            startActivity(intent);
-                        });
-                    }
-
-                    @Override
-                    public void configureTheme(@NonNull MarkwonTheme.Builder builder) {
-                        builder.linkColor(linkColor);
-                    }
-                })
-                .usePlugin(SpoilerParserPlugin.create(commentColor, commentSpoilerBackgroundColor))
-                .usePlugin(RedditHeadingPlugin.create())
-                .usePlugin(StrikethroughPlugin.create())
-                .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
-                .build();
-        if (parentTextMarkdown != null) {
-            commentParentMarkwonView.setOnLongClickListener(view -> {
-                Utils.hideKeyboard(CommentActivity.this);
-                if (parentText == null) {
-                    CopyTextBottomSheetFragment.show(getSupportFragmentManager(),
-                            parentTextMarkdown, null);
-                } else {
-                    CopyTextBottomSheetFragment.show(getSupportFragmentManager(),
-                            parentText, parentTextMarkdown);
-                }
-                return true;
-            });
-            markwon.setMarkdown(commentParentMarkwonView, parentTextMarkdown);
-        }
         String parentBodyMarkdown = intent.getStringExtra(EXTRA_COMMENT_PARENT_BODY_MARKDOWN_KEY);
         String parentBody = intent.getStringExtra(EXTRA_COMMENT_PARENT_BODY_KEY);
         if (parentBodyMarkdown != null && !parentBodyMarkdown.equals("")) {
@@ -325,6 +275,9 @@ public class CommentActivity extends BaseActivity implements UploadImageEnabledA
         isReplying = intent.getExtras().getBoolean(EXTRA_IS_REPLYING_KEY);
         if (isReplying) {
             toolbar.setTitle(getString(R.string.comment_activity_label_is_replying));
+            setParentTitleWithMarkdown(parentText, parentTextMarkdown);
+        } else {
+            setParentTitleNoMarkdown(parentTextMarkdown);
         }
 
         setSupportActionBar(toolbar);
@@ -384,6 +337,66 @@ public class CommentActivity extends BaseActivity implements UploadImageEnabledA
         if (imm != null) {
             imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
         }
+    }
+
+    private void setParentTitleWithMarkdown(String parentText, String parentTextMarkdown) {
+        int linkColor = mCustomThemeWrapper.getLinkColor();
+
+        Markwon markwon = Markwon.builder(this)
+                .usePlugin(MarkwonInlineParserPlugin.create(plugin -> {
+                    plugin.excludeInlineProcessor(AutolinkInlineProcessor.class);
+                    plugin.excludeInlineProcessor(HtmlInlineProcessor.class);
+                    plugin.excludeInlineProcessor(BangInlineProcessor.class);
+                    plugin.addInlineProcessor(new SuperscriptInlineProcessor());
+                }))
+                .usePlugin(HtmlPlugin.create(plugin -> {
+                    plugin.excludeDefaults(true).addHandler(new SuperScriptHandler());
+                }))
+                .usePlugin(new AbstractMarkwonPlugin() {
+                    @NonNull
+                    @Override
+                    public String processMarkdown(@NonNull String markdown) {
+                        return Utils.fixSuperScript(markdown);
+                    }
+
+                    @Override
+                    public void configureConfiguration(@NonNull MarkwonConfiguration.Builder builder) {
+                        builder.linkResolver((view, link) -> {
+                            Intent intent = new Intent(CommentActivity.this, LinkResolverActivity.class);
+                            Uri uri = Uri.parse(link);
+                            intent.setData(uri);
+                            startActivity(intent);
+                        });
+                    }
+
+                    @Override
+                    public void configureTheme(@NonNull MarkwonTheme.Builder builder) {
+                        builder.linkColor(linkColor);
+                    }
+                })
+                .usePlugin(SpoilerParserPlugin.create(commentColor, commentSpoilerBackgroundColor))
+                .usePlugin(RedditHeadingPlugin.create())
+                .usePlugin(StrikethroughPlugin.create())
+                .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
+                .build();
+        if (parentTextMarkdown != null) {
+            commentParentMarkwonView.setOnLongClickListener(view -> {
+                Utils.hideKeyboard(CommentActivity.this);
+                if (parentText == null) {
+                    CopyTextBottomSheetFragment.show(getSupportFragmentManager(),
+                            parentTextMarkdown, null);
+                } else {
+                    CopyTextBottomSheetFragment.show(getSupportFragmentManager(),
+                            parentText, parentTextMarkdown);
+                }
+                return true;
+            });
+
+            markwon.setMarkdown(commentParentMarkwonView, parentTextMarkdown);
+        }
+    }
+    private void setParentTitleNoMarkdown(String parentTextMarkdown) {
+        commentParentMarkwonView.setText(parentTextMarkdown);
     }
 
     private void loadCurrentAccount() {
